@@ -1,9 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:minhas_compras/helpers/compra.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:minhas_compras/helpers/item.dart';
+import 'package:minhas_compras/ui/item_list_page.dart';
+
+import 'item_page.dart';
 
 class CompraPage extends StatefulWidget {
   final Compra compra;
@@ -15,8 +17,11 @@ class CompraPage extends StatefulWidget {
 }
 
 class _CompraPageState extends State<CompraPage> {
+  ItemHelper helperItem = ItemHelper();
+  List<Item> items = List();
+
   Compra _editCompra;
-  bool _userEdited = false;
+  bool _compraEdited = false;
 
   DateTime selectedDate = DateTime.now();
   DateTime _dateTime;
@@ -40,12 +45,12 @@ class _CompraPageState extends State<CompraPage> {
   @override
   void initState() {
     super.initState();
+
     if (widget.compra == null) {
       _editCompra = Compra();
     } else {
       _editCompra = Compra.fromMap(widget.compra.toMap());
       _nameController.text = _editCompra.name;
-
     }
   }
 
@@ -56,7 +61,7 @@ class _CompraPageState extends State<CompraPage> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.deepOrange,
-          title: Text(_editCompra.name ?? "Novo Contato"),
+          title: Text(_editCompra.name ?? "Nova Compra"),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
@@ -79,7 +84,7 @@ class _CompraPageState extends State<CompraPage> {
                   focusNode: _nameFocus,
                   decoration: InputDecoration(labelText: "Name"),
                   onChanged: (text) {
-                    _userEdited = true;
+                    _compraEdited = true;
                     setState(() {
                       _editCompra.name = text;
                     });
@@ -90,38 +95,75 @@ class _CompraPageState extends State<CompraPage> {
                     padding: EdgeInsets.all(10.0),
                     child: Column(
                       children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Text(_editCompra.date == null
-                                ? 'Escolha uma data'
-                                : DateFormat('dd/MM/yyyy')
-                        .format(DateTime.fromMillisecondsSinceEpoch(
-                                _editCompra.date))
-                        .toString()),
-                          ],
-                        ),
-                        Row(
-                          children: <Widget>[
-                            RaisedButton(
-                              child: Icon(Icons.calendar_today),
-                              onPressed: () {
-                                showDatePicker(
-                                        context: context,
-                                        initialDate: _editCompra.date != null
-                                            ? DateTime.fromMillisecondsSinceEpoch(_editCompra.date)
-                                            : DateTime.now(),
-                                        firstDate: DateTime(2001),
-                                        lastDate: DateTime(2021))
-                                    .then((date) {
-                                  setState(() {
-                                    _userEdited = true;
-                                    _editCompra.date = date.millisecondsSinceEpoch;
-                                  });
-                                });
-                              },
-                            )
-                          ],
-                        )
+                        Row(children: <Widget>[
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              children: <Widget>[
+                                Text(_editCompra.date == null
+                                    ? 'Escolha uma data'
+                                    : DateFormat('dd/MM/yyyy')
+                                    .format(
+                                    DateTime.fromMillisecondsSinceEpoch(
+                                        _editCompra.date))
+                                    .toString()),
+                                RaisedButton(
+                                  child: Icon(Icons.calendar_today),
+                                  onPressed: () {
+                                    showDatePicker(
+                                            context: context,
+                                            initialDate: _editCompra.date !=
+                                                    null
+                                                ? DateTime
+                                                    .fromMillisecondsSinceEpoch(
+                                                        _editCompra.date)
+                                                : DateTime.now(),
+                                            firstDate: DateTime(2001),
+                                            lastDate: DateTime(2021))
+                                        .then((date) {
+                                      setState(() {
+                                        _compraEdited = true;
+                                        _editCompra.date =
+                                            date.millisecondsSinceEpoch;
+                                      });
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top:10.0),
+                              child: RaisedButton(
+                                  child: Icon(Icons.add_shopping_cart),
+                                  onPressed: () {
+                                    if(_editCompra.id!=null){
+                                      _showItemListPage();
+                                    }else{
+                                      showDialog(
+                                          context: context,
+                                          builder: (context) {
+                                            return AlertDialog(
+                                              title: Text("Alerta"),
+                                              content: Text("Você precisa salvar um compra antes"),
+                                              actions: <Widget>[
+                                                FlatButton(
+                                                  child: Text("Ok"),
+                                                  onPressed: () {
+                                                    Navigator.pop(context);
+                                                  },
+                                                ),
+                                              ],
+                                            );
+                                          });
+                                    }
+
+                                  }),
+                            ),
+                          ),
+                        ]),
                       ],
                     ),
                   ),
@@ -135,7 +177,7 @@ class _CompraPageState extends State<CompraPage> {
   }
 
   Future<bool> _requestPop() {
-    if (_userEdited) {
+    if (_compraEdited) {
       showDialog(
           context: context,
           builder: (context) {
@@ -162,6 +204,32 @@ class _CompraPageState extends State<CompraPage> {
       return Future.value(false);
     } else {
       return Future.value(true);
+    }
+  }
+
+  void _getAllItemsByIdCompra(int idCompra) {
+    helperItem.getAllItemsByIdCompra(idCompra).then((list) {
+      setState(() {
+        items = list;
+      });
+    });
+  }
+
+  void _showItemListPage({Item item}) async {
+    final recItem = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => ItemListPage(
+                  item: item,
+                  idCompra: _editCompra.id,
+                )));
+    if (recItem != null) {
+      if (item != null) {
+        await helperItem.updateItem(recItem);
+      } else {
+        await helperItem.saveItem(recItem);
+      }
+      _getAllItemsByIdCompra(_editCompra.id);
     }
   }
 }

@@ -58,35 +58,36 @@ class CompraHelper {
   }
 
   Future<int> deleteCompra(int id) async {
-    Database dbCompra = await _db;
+    Database dbCompra = await db;
     return await dbCompra
         .delete(compraTable, where: "$idColumn = ?", whereArgs: [id]);
   }
 
   Future<int> updateCompra(Compra compra) async {
-    Database dbCompra = await _db;
+    Database dbCompra = await db;
     return await dbCompra.update(compraTable, compra.toMap(),
         where: "$idColumn = ?", whereArgs: [compra.id]);
   }
 
   Future<List> getAllCompras() async {
-    Database dbCompra = await _db;
+    Database dbCompra = await db;
     List listMap = await dbCompra.rawQuery("SELECT * FROM $compraTable");
     List<Compra> listCompra = List();
     for (Map m in listMap) {
       listCompra.add(Compra.fromMap(m));
     }
+    print(listCompra);
     return listCompra;
   }
 
   Future<int> getNumber() async {
-    Database dbCompra = await _db;
+    Database dbCompra = await db;
     return Sqflite.firstIntValue(
         await dbCompra.rawQuery("SELECT COUNT(*) FROM $compraTable"));
   }
 
   Future close() async {
-    Database dbCompra = await _db;
+    Database dbCompra = await db;
     dbCompra.close();
   }
 }
